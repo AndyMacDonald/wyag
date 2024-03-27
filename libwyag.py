@@ -12,6 +12,40 @@ import sys
 import zlib
 
 
+############################################
+# GitRepository class and helper functions #
+############################################
+
+
+class GitRepository (object):
+    """A git repository"""
+
+    worktree = None
+    gitdir = None
+    conf = None
+
+    def __init__(self, path, force=False):
+        self.worktree = path
+        self.gitdir = os.path.join(self.worktree, ".git")
+
+        if not (force or os.path.isdir(self.gitdir)):
+            raise Exception("Not a Git repository %s" % path)
+
+        # Read configuration file in .git/config
+        self.conf = configparser.ConfigParser()
+        cf = repo_file(self, "config")
+
+        if cf and os.path.exists(cf):
+            self.conf.read([cf])
+        elif not force:
+            raise Exception("Configuration file missing")
+
+        if not force:
+            vers = int(self.conf.get("core", "repositoryformatversion"))
+            if vers != 0:
+                raise Exception("Unsupported repositoryformatversion %s" % vers)
+
+
 def repo_path(repo, *path):
     """Compute path under repo's gitdir."""
     return os.path.join(repo.gitdir, *path)
@@ -112,35 +146,9 @@ def repo_find(path=".", required=True):
     # Recursive case
     return repo_find(parent, required)
 
-
-class GitRepository (object):
-    """A git repository"""
-
-    worktree = None
-    gitdir = None
-    conf = None
-
-    def __init__(self, path, force=False):
-        self.worktree = path
-        self.gitdir = os.path.join(self.worktree, ".git")
-
-        if not (force or os.path.isdir(self.gitdir)):
-            raise Exception("Not a Git repository %s" % path)
-
-        # Read configuration file in .git/config
-        self.conf = configparser.ConfigParser()
-        cf = repo_file(self, "config")
-
-        if cf and os.path.exists(cf):
-            self.conf.read([cf])
-        elif not force:
-            raise Exception("Configuration file missing")
-
-        if not force:
-            vers = int(self.conf.get("core", "repositoryformatversion"))
-            if vers != 0:
-                raise Exception("Unsupported repositoryformatversion %s" % vers)
-
+############
+# Commands #
+############
 
 def cmd_init(args):
     repo_create(args.path)
